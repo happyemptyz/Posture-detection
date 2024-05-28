@@ -1,75 +1,73 @@
 import logging,  cv2, time, numpy as np, mediapipe as mp, tkinter as tk, sys, mysql.connector, os, subprocess, webbrowser, uuid
-#導入模塊 #日誌  #OpenCV #時間  #數組處理      #Mediapipe    #Tkinter GUI #系統相關  #MySQL連接器  #操作系統 #子進程管理 #網頁瀏覽器  #UUID生成
-from datetime import datetime  # 導入datetime
-from tkinter import simpledialog, messagebox  # Tkinter中的對話框和消息框
+from datetime import datetime 
+from tkinter import simpledialog, messagebox
 
-class Application(tk.Tk): #應用程式類別、主窗口。
-    def __init__(self, pose_detection): # 初始化方法：設置應用窗口和姿勢檢測相關的設定
+class Application(tk.Tk):
+    def __init__(self, pose_detection): 
         super().__init__()
-        self.pose_detection = pose_detection # 保存姿勢檢測物件的引用
-        self.title('深蹲姿勢判斷系統')
+        self.pose_detection = pose_detection
+        self.title('Squat Posture Analysis System')
         self.geometry('900x600')
-        self.create_widgets() # 創建界面元素
-    def create_widgets(self): # 創建 GUI 界面元素
-        button_width = 20  # 設定按鈕大小
+        self.create_widgets()
+    def create_widgets(self):
+        button_width = 20
         button_height = 2
         tk.Button(self, text="直接進行深蹲判斷", command=self.start_pose_detection, width=button_width, height=button_height).pack(pady=30) # 創建四個按鈕
         tk.Button(self, text="開始進行負重深蹲", command=self.start_weighted_squat, width=button_width, height=button_height).pack(pady=30)
         tk.Button(self, text="查看數據分析",    command=self.view_data_analysis,   width=button_width, height=button_height).pack(pady=30)
         tk.Button(self, text="離開",           command=self.quit_application,     width=button_width, height=button_height).pack(pady=30)
-    def start_pose_detection(self):     # 啟動深蹲姿勢檢測的方法
-        self.hide()  # 隱藏主窗口
+    def start_pose_detection(self):
+        self.hide()
         self.pose_detection.start_new_session()
-        try: # 啟動深蹲姿勢檢測
+        try: 
             main(self.pose_detection)
         except Exception as e:
             messagebox.showerror("錯誤", f"深蹲姿勢判斷發生錯誤: {e}")
-        self.show() # 顯示主窗口
-    def start_weighted_squat(self): # 啟動負重深蹲過程，包括輸入負重、體重，並決定後續操作
-        self.hide() # 隱藏主窗口以進行輸入操作
-        gender = self.ask_for_gender() # 請求用戶輸入性別、負重量和體重
-        if gender: # 用戶選擇是，則啟動深蹲姿勢檢測
+        self.show()
+    def start_weighted_squat(self):
+        self.hide() 
+        gender = self.ask_for_gender() 
+        if gender: 
             self.pose_detection.gender = gender
-        else: # 用戶選擇否，則返回主畫面
+        else:
             messagebox.showerror("錯誤", "沒有選擇性別！")
-            self.show()  # 重新顯示主窗口
+            self.show() 
             return
-        weight = simpledialog.askstring("輸入", "請輸入要負重的重量:") # 請求用戶輸入負重，並檢查輸入有效性
+        weight = simpledialog.askstring("輸入", "請輸入要負重的重量:")
         if weight is not None:
             try:
-            # 確保輸入的是一個可以轉換為 float 的值
                 weight_float = float(weight)
-                self.pose_detection.weight = weight_float # 將輸入轉換為 float 並設置
-                print(f"設置後的 self.pose_detection.weight: {self.pose_detection.weight}")
+                self.pose_detection.weight = weight_float
+                print(f"self.pose_detection.weight: {self.pose_detection.weight}")
             except ValueError:
                 messagebox.showerror("錯誤", "請輸入有效的數字！")
                 return
         else:
             messagebox.showerror("錯誤", "沒有輸入負重！")
             return
-        body_weight_str = simpledialog.askstring("輸入", "請輸入你的體重:") # 請求用戶輸入體重，並檢查輸入有效性
+        body_weight_str = simpledialog.askstring("輸入", "請輸入你的體重:")
         if body_weight_str is not None:
             try:
                 body_weight_float = float(body_weight_str)
-                self.pose_detection.body_weight = body_weight_float # 將輸入轉換為 float 並設置
+                self.pose_detection.body_weight = body_weight_float
             except ValueError:
                 messagebox.showerror("錯誤", "請輸入有效的數字！")
                 return
         else:
             messagebox.showerror("錯誤", "沒有輸入體重！")
             return 
-        response = messagebox.askyesno("選項", "1. 進入深蹲判判斷程式\n2. 返回主畫面") # 提供操作選項：進行深蹲判斷或返回主畫面
-        if response:  # Yes 選項對應進入深蹲判斷程式
+        response = messagebox.askyesno("選項", "1. 進入深蹲判判斷程式\n2. 返回主畫面") 
+        if response:
             self.start_pose_detection()
-        else:  # No 選項對應返回主畫面
+        else: 
             self.show()        
-    def ask_for_gender(self): # 創建一個自定義對話框來詢問性別
+    def ask_for_gender(self):
         dialog = tk.Toplevel(self)
         dialog.title("選擇性別")
-        dialog.geometry('900x600')  # 設定對話框的大小
+        dialog.geometry('900x600') 
         tk.Label(dialog, text="請選擇你的性別：", font=("Arial", 20)).pack(pady=10)
         selected_gender = tk.StringVar()
-        button_width = 20 # 設定按鈕大小
+        button_width = 20
         button_height = 2
         font_size = ("Arial", 20)
         tk.Button(dialog, text="Male", command=lambda: selected_gender.set('male'),
@@ -86,21 +84,25 @@ class Application(tk.Tk): #應用程式類別、主窗口。
             webbrowser.get(chrome_path).open(url)
         except Exception as e:
             messagebox.showerror("錯誤", f"無法打開網頁: {e}")
-    def quit_application(self): # 退出應用程序
-        self.quit() #關閉應用程序的主窗口
-    def hide(self): # 隱藏窗口
-        self.withdraw() # 隱藏應用程序的主窗口
-    def show(self): # 顯示窗口
-        self.update() # 顯示應用程序的主窗口
+    def quit_application(self):
+        self.quit()
+    def hide(self): 
+        self.withdraw() 
+    def show(self):
+        self.update() 
         self.deiconify()
-def gui_main(): # GUI 主函數
-    detector = PoseDetection() #創建姿勢檢測器和應用程序的實例
+def gui_main():
+    detector = PoseDetection() 
     app = Application(detector)
-    app.mainloop() # 主事件循環
+    app.mainloop() 
 
-class PoseDetection(): # 姿勢檢測
+
+
+
+
+class PoseDetection(): 
     def __init__(self, image_mode=False, model_compl=1, smooth_lm=True, enable_seg=False, smooth_seg=True, min_detection_conf=0.5, min_tracking_conf=0.5, flip_frame=False, weight=0):
-        self.setup_logging() #初始化基本屬性⬇️
+        self.setup_logging()
         self.weight = weight
         self.body_weight = 0
         self.one_rm_kg = 0 
@@ -148,28 +150,26 @@ class PoseDetection(): # 姿勢檢測
                                 18: 'right pinkie',  19: 'left index',     20: 'right index',   21: 'left thumb',    22: 'right thumb',    23: 'left hip',    24: 'right hip',     25: 'left knee',      26: 'right knee', 
                                 27: 'left ankle',    28: 'right ankle',    29: 'left heel',     30: 'right heel',    31: 'left foot index',32: 'right foot index',}
         self.landmarks_info = {}  
-        self.initialize_landmarks_info() # 再次初始化關鍵點資訊，確保所有設定已載入
-    def start_new_session(self): # 日誌設置函數
+        self.initialize_landmarks_info() 
+    def start_new_session(self):
         self.session_id = str(uuid.uuid4())
         self.start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-        self.end_time = None  # 初始化為 None，直到會話結束時才設置
+        self.end_time = None 
         logging.info(f"New session started with ID: {self.session_id}")        
     def end_session(self):
         self.end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
         start_dt = datetime.strptime(self.start_time, '%Y-%m-%d %H:%M:%S.%f')
         end_dt = datetime.strptime(self.end_time, '%Y-%m-%d %H:%M:%S.%f')
-        self.total_time = (end_dt - start_dt).total_seconds()  # Calculate total duration in seconds
-        # 計算這次 session 的 correct_times 和 incorrect_times
+        self.total_time = (end_dt - start_dt).total_seconds() 
         self.calculate_correct_incorrect_times()
         self.get_gender_and_accuracy()
         self.get_additional_info()
-        self.log_session_to_database()    # 結束會話時寫入資料庫
+        self.log_session_to_database() 
     def get_additional_info(self):
         connection = self.connect_to_mysql()
         if connection is not None:
             try:
                 cursor = connection.cursor()
-                # 獲取該 session_id 的 one_rm_kg 和 level_1_to_7 的最後一個值
                 sql = """
                     SELECT one_rm_kg, level_1_to_7 
                     FROM squats 
@@ -182,7 +182,7 @@ class PoseDetection(): # 姿勢檢測
                 if result:
                     self.one_rm_kg, self.level_1_to_7 = result
                 else:
-                    self.one_rm_kg, self.level_1_to_7 = 0, 'unknown' # 若無資料則設為預設值
+                    self.one_rm_kg, self.level_1_to_7 = 0, 'unknown'
             except mysql.connector.Error as error:
                 logging.error(f"Failed to retrieve additional info: {error}")
             finally:
@@ -193,7 +193,6 @@ class PoseDetection(): # 姿勢檢測
         if connection is not None:
             try:
                 cursor = connection.cursor()
-                # 獲取該 session_id 的最大 correct_count 和 incorrect_count
                 sql = "SELECT MAX(correct_count), MAX(incorrect_count) FROM squats WHERE session_id = %s"
                 val = (self.session_id,)
                 cursor.execute(sql, val)
@@ -209,7 +208,6 @@ class PoseDetection(): # 姿勢檢測
         if connection is not None:
             try:
                 cursor = connection.cursor()
-            # 獲取該 session_id 的 gender 和最後一個 accuracy
                 sql = "SELECT gender, accuracy FROM squats WHERE session_id = %s ORDER BY timestamp DESC LIMIT 1"
                 val = (self.session_id,)
                 cursor.execute(sql, val)
@@ -243,12 +241,12 @@ class PoseDetection(): # 姿勢檢測
                 cursor.close()
                 connection.close()
 
-    def update_one_rm(self, total_attempts): # 根據嘗試次數計算 one_rm_kg
+    def update_one_rm(self, total_attempts): 
         if total_attempts > 0:
             self.one_rm_kg = self.weight * (1 + (total_attempts * 0.0333))
         else:
             self.one_rm_kg = 0
-    def determine_level(self, one_rm_kg, body_weight, gender): # 定義levels，性別、體重、1RM重量對照等級
+    def determine_level(self, one_rm_kg, body_weight, gender): 
         levels = {'male': {  55: [74, 98, 110, 122, 160, 169, 200],
                              61: [81, 109, 126, 143, 169, 194, 220],
                              67: [86, 113, 136, 158, 189, 201, 232],
@@ -279,16 +277,16 @@ class PoseDetection(): # 姿勢檢測
         return 'level_7'   
     def generate_error_details(self):
         feedback_messages = []
-        if self.state_tracker['DISPLAY_TEXT'][0]:  # 对应 BEND BACKWARDS
+        if self.state_tracker['DISPLAY_TEXT'][0]: 
             feedback_messages.append('BEND BACKWARDS')
-        if self.state_tracker['DISPLAY_TEXT'][1]:  # 对应 BEND FORWARD
+        if self.state_tracker['DISPLAY_TEXT'][1]: 
             feedback_messages.append('BEND FORWARD')
-        if self.state_tracker['DISPLAY_TEXT'][2]:  # 对应 KNEE FALLING OVER TOE
+        if self.state_tracker['DISPLAY_TEXT'][2]: 
             feedback_messages.append('KNEE FALLING OVER TOE')
-        if self.state_tracker['DISPLAY_TEXT'][3]:  # 对应 SQUAT TOO DEEP
+        if self.state_tracker['DISPLAY_TEXT'][3]:  
             feedback_messages.append('SQUAT TOO DEEP')
-        if self.state_tracker['LOWER_HIPS']:  # 对应 LOWER YOUR HIPS
-            feedback_messages.insert(0, 'LOWER YOUR HIPS')  # 优先显示
+        if self.state_tracker['LOWER_HIPS']: 
+            feedback_messages.insert(0, 'LOWER YOUR HIPS') 
         return ', '.join(feedback_messages)
     
     def initialize_landmarks_info(self):
@@ -321,7 +319,6 @@ class PoseDetection(): # 姿勢檢測
             return None
 
     def log_landmark(self, id, timestamp, landmark_index, x, y):
-        # 現在這個方法將座標添加到字典中，而不是直接寫入日誌或資料庫
         landmark_name = self.landmark_names.get(landmark_index, f"Unknown landmark {landmark_index}")
         self.landmarks_info[landmark_name] = (x, y)
 
@@ -336,25 +333,16 @@ class PoseDetection(): # 姿勢檢測
                 formatted_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
                 gender = self.gender if hasattr(self, 'gender') and self.gender in ['male', 'female'] else 'unknown'
                 error_details = self.generate_error_details() 
-                # 計算正確率
-                
                 total_attempts = self.state_tracker['SQUAT_COUNT'] + self.state_tracker['IMPROPER_SQUAT']
-                # 更新 one_rm_kg 和 level，這應該在這裡完成，以保證數據的時效性
                 self.update_one_rm(total_attempts)
                 level = self.determine_level(self.one_rm_kg, self.body_weight, gender)
-                # 計算 accuracy
                 accuracy = (self.state_tracker['SQUAT_COUNT'] / total_attempts) * 100 if total_attempts > 0 else 0
-            
-                # 偵測到的地標資料
                 detected_landmarks = {k: v for k, v in self.landmarks_info.items() if v[0] is not None}
-                if detected_landmarks:  # 確保有地標數據可以插入
+                if detected_landmarks: 
                   sql_columns = ", ".join([f"`{name.replace(' ', '_')}_x_coord`, `{name.replace(' ', '_')}_y_coord`" for name in detected_landmarks.keys()])
                   sql_values_placeholders = ", ".join(["%s"] * (len(detected_landmarks) * 2))
-
                   sql = f"INSERT INTO squats (session_id, timestamp, gender, correct_count, incorrect_count, total_attempts, accuracy, error_details, one_rm_kg, level_1_to_7, {sql_columns}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, {sql_values_placeholders})"
                   val = [self.session_id, formatted_timestamp, gender, self.state_tracker['SQUAT_COUNT'], self.state_tracker['IMPROPER_SQUAT'], total_attempts, accuracy, error_details, self.one_rm_kg, level] + [coord for coords in detected_landmarks.values() for coord in coords]
-
-                    # 執行 SQL 語句
                   cursor.execute(sql, val)
                   connection.commit()
                   logging.info("Data inserted successfully")
@@ -374,14 +362,12 @@ class PoseDetection(): # 姿勢檢測
         x1, y1 = rect_start
         x2, y2 = rect_end
         w = corner_width
-        # draw filled rectangles
-        cv2.rectangle(frame, (x1 + w, y1), (x2 - w, y1 + w), box_color, -1)
+        cv2.rectangle(frame, (x1 + w, y1), (x2 - w, y1 + w), box_color, -1)        # draw filled rectangles
         cv2.rectangle(frame, (x1 + w, y2 - w), (x2 - w, y2), box_color, -1)
         cv2.rectangle(frame, (x1, y1 + w), (x1 + w, y2 - w), box_color, -1)
         cv2.rectangle(frame, (x2 - w, y1 + w), (x2, y2 - w), box_color, -1)
         cv2.rectangle(frame, (x1 + w, y1 + w), (x2 - w, y2 - w), box_color, -1)
-        # draw filled ellipses
-        cv2.ellipse(frame, (x1 + w, y1 + w), (w, w), angle=0, startAngle=-90, endAngle=-180, color=box_color, thickness=-1)
+        cv2.ellipse(frame, (x1 + w, y1 + w), (w, w), angle=0, startAngle=-90, endAngle=-180, color=box_color, thickness=-1)        # draw filled ellipses
         cv2.ellipse(frame, (x2 - w, y1 + w), (w, w), angle=0, startAngle=0, endAngle=-90, color=box_color, thickness=-1)
         cv2.ellipse(frame, (x1 + w, y2 - w), (w, w), angle=0, startAngle=90, endAngle=180, color=box_color, thickness=-1)
         cv2.ellipse(frame, (x2 - w, y2 - w), (w, w), angle=0, startAngle=0, endAngle=90, color=box_color, thickness=-1)
@@ -394,8 +380,7 @@ class PoseDetection(): # 姿勢檢測
                        2, line_color, -1, lineType=cv2.LINE_AA)
         return frame
 
-    def draw_text(
-        self,
+    def draw_text(self,
         frame,
         msg,
         width=8,
